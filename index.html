@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyber Routine V8</title>
+    <style>
+        :root {
+            --bg-dark: #0B0E14; --bg-card: #151921; --neon-blue: #00D1FF;
+            --glow-blue: rgba(0, 209, 255, 0.3); --neon-green: #00FF94;
+            --glow-green: rgba(0, 255, 148, 0.2); --neon-maroon: #FF2E2E;
+            --text-main: #E0E6ED; --text-dim: #788291;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: sans-serif; background-color: var(--bg-dark); color: var(--text-main); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 15px; }
+        header { width: 100%; max-width: 400px; display: flex; justify-content: flex-end; position: relative; }
+        .menu-dots { cursor: pointer; font-size: 32px; color: var(--neon-blue); padding: 10px; }
+        .dropdown { display: none; position: absolute; top: 50px; right: 10px; background: var(--bg-card); border: 1px solid var(--neon-blue); border-radius: 12px; z-index: 100; box-shadow: 0 5px 20px #000; }
+        .dropdown button { background: none; border: none; color: var(--neon-maroon); padding: 18px 25px; font-weight: bold; width: 100%; cursor: pointer; }
+        #display-div { width: 100%; max-width: 400px; background-color: var(--bg-card); border: 1.5px solid var(--neon-blue); border-radius: 28px; padding: 30px 15px; text-align: center; box-shadow: 0 0 25px var(--glow-blue); margin-bottom: 20px; }
+        #live-clock { font-size: 3.2rem; font-weight: 800; text-shadow: 0 0 10px var(--glow-blue); margin: 0; }
+        #current-segment-name { font-size: 1rem; color: var(--neon-blue); text-transform: uppercase; letter-spacing: 1.5px; margin: 15px 0 5px; font-weight: bold; }
+        #time-left { font-size: 0.95rem; color: var(--text-dim); margin-bottom: 10px; }
+        .progress-container { width: 90%; height: 10px; background: #000; border-radius: 20px; margin: 15px auto 0; overflow: hidden; display: none; border: 1px solid rgba(255,255,255,0.1); }
+        #progress-bar { width: 0%; height: 100%; background: var(--neon-green); box-shadow: 0 0 10px var(--neon-green); transition: width 1s linear; }
+        #start-btn, #stop-alarm-btn { border: none; padding: 16px 45px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; font-weight: 800; text-transform: uppercase; margin-top: 20px; }
+        #start-btn { background: var(--neon-blue); color: #000; box-shadow: 0 0 15px var(--glow-blue); }
+        #stop-alarm-btn { background: var(--neon-maroon); color: #fff; box-shadow: 0 0 20px rgba(255, 46, 46, 0.4); display: none; animation: shake 0.5s infinite; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .segment-list { width: 100%; max-width: 400px; display: none; flex-direction: column; gap: 12px; padding-bottom: 40px; }
+        .segment-card { background-color: var(--bg-card); padding: 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        .segment-card.active { border-color: var(--neon-green); background: linear-gradient(145deg, #151921 0%, #0D1D16 100%); box-shadow: 0 0 15px var(--glow-green); }
+        .card-title { font-size: 0.95rem; font-weight: 700; }
+        .card-time { font-size: 0.85rem; color: var(--text-dim); }
+        .pulse { animation: pulse-anim 2s infinite; }
+        @keyframes pulse-anim { 0%, 100% {opacity: 1;} 50% {opacity: 0.4;} }
+    </style>
+</head>
+<body onclick="unlockAudio()"> <audio id="alarmSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <header>
+        <div class="menu-dots" onclick="toggleMenu()">⋮</div>
+        <div class="dropdown" id="menuDropdown">
+            <button onclick="resetApp()">RESET SYSTEM</button>
+        </div>
+    </header>
+
+    <div id="display-div">
+        <div id="live-clock">00:00:00</div>
+        <div id="current-segment-name">SYSTEM: SLEEP</div>
+        <div id="time-left">Tap screen to enable sound</div>
+        <div class="progress-container" id="prog-cont"><div id="progress-bar"></div></div>
+        <button id="start-btn" onclick="startRoutine()">I Wake Up</button>
+        <button id="stop-alarm-btn" onclick="stopAlarm()">STOP ALARM</button>
+    </div>
+    <div class="segment-list" id="segmentList"></div>
+
+<script>
+    const segmentsData = [
+        { id: 0, name: "Morning Routine", dur: 2 }, { id: 1, name: "Video Editing", dur: 3 },
+        { id: 2, name: "Free Time", dur: 2 }, { id: 3, name: "Religion / Personality", dur: 1 },
+        { id: 4, name: "Study", dur: 1 }, { id: 5, name: "Free Time", dur: 1 },
+        { id: 6, name: "Content Creation", dur: 2 }, { id: 7, name: "Insect/Rodent Business", dur: 1 },
+        { id: 8, name: "Diary / ToDo List", dur: 0.5 }, { id: 9, name: "Free Time", dur: 2.5 }
+    ];
+
+    let startTime = null, isActive = false, lastPlayedSeg = localStorage.getItem('last_alarm_seg') || null;
+    let alarmInterval = null, audioUnlocked = false;
+
+    function unlockAudio() {
+        if (audioUnlocked) return;
+        const audio = document.getElementById('alarmSound');
+        audio.play().then(() => { audio.pause(); audio.currentTime = 0; audioUnlocked = true; 
+            if(!isActive) document.getElementById('time-left').innerText = "Sound Enabled. Ready.";
+        }).catch(e => console.log("Unlock failed"));
+    }
+
+    window.onload = () => {
+        const savedStart = localStorage.getItem('routine_start_time'), savedActive = localStorage.getItem('routine_is_active');
+        if (savedActive === 'true' && savedStart) {
+            startTime = new Date(parseInt(savedStart)); isActive = true;
+            document.getElementById('start-btn').style.display = 'none';
+            document.getElementById('segmentList').style.display = 'flex';
+        }
+        update(); 
+    };
+
+    function toggleMenu() { const d = document.getElementById('menuDropdown'); d.style.display = d.style.display === 'block' ? 'none' : 'block'; }
+
+    function resetApp() { if(!confirm("Reset?")) return; stopAlarm(); isActive = false; localStorage.clear(); location.reload(); }
+
+    function startRoutine() {
+        isActive = true; startTime = (function(n){
+            let r = new Date(n); r.setSeconds(0); r.setMilliseconds(0);
+            let m = n.getMinutes();
+            if (m <= 30) r.setMinutes(30); else { r.setHours(n.getHours() + 1); r.setMinutes(0); }
+            return r;
+        })(new Date());
+        localStorage.setItem('routine_start_time', startTime.getTime());
+        localStorage.setItem('routine_is_active', 'true');
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('segmentList').style.display = 'flex';
+        update();
+    }
+
+    function triggerAlarm() {
+        const audio = document.getElementById('alarmSound');
+        document.getElementById('stop-alarm-btn').style.display = 'inline-block';
+        let count = 0;
+        alarmInterval = setInterval(() => {
+            audio.currentTime = 0; audio.play();
+            if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+            if (++count >= 15) stopAlarm();
+        }, 1500);
+    }
+
+    function stopAlarm() { clearInterval(alarmInterval); document.getElementById('stop-alarm-btn').style.display = 'none'; }
+
+    function update() {
+        let now = new Date();
+        document.getElementById('live-clock').innerText = now.toLocaleTimeString([], {hour12:true, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        if (!isActive) return;
+        let currentRunningTime = new Date(startTime), listHtml = "";
+
+        if (now < startTime) {
+            document.getElementById('current-segment-name').innerText = "PREPARING...";
+            document.getElementById('current-segment-name').classList.add('pulse');
+            document.getElementById('time-left').innerText = `Starts at ${startTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+            document.getElementById('prog-cont').style.display = 'none';
+        } else {
+            document.getElementById('prog-cont').style.display = 'block';
+            document.getElementById('current-segment-name').classList.remove('pulse');
+        }
+
+        segmentsData.forEach(seg => {
+            let sTime = new Date(currentRunningTime), eTime = new Date(currentRunningTime.getTime() + seg.dur * 3600000);
+            let activeClass = (now >= sTime && now < eTime) ? "active" : "";
+            if (activeClass) {
+                document.getElementById('current-segment-name').innerText = `SEG ${seg.id}: ${seg.name}`;
+                if (lastPlayedSeg !== seg.id.toString()) { triggerAlarm(); lastPlayedSeg = seg.id.toString(); localStorage.setItem('last_alarm_seg', lastPlayedSeg); }
+                let diff = eTime - now, hL = Math.floor(diff / 3600000), mL = Math.floor((diff % 3600000) / 60000);
+                document.getElementById('time-left').innerText = `${hL}h ${mL}m remaining`;
+                document.getElementById('progress-bar').style.width = ((now - sTime) / (eTime - sTime) * 100) + "%";
+            }
+            listHtml += `<div class="segment-card ${activeClass}"><div class="card-title">Seg ${seg.id}: ${seg.name}</div><div class="card-time">${sTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} - ${eTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>`;
+            currentRunningTime = eTime;
+        });
+        document.getElementById('segmentList').innerHTML = listHtml;
+        if (now >= currentRunningTime) resetApp();
+    }
+    setInterval(update, 1000);
+</script>
+</body>
+</html>
