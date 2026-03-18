@@ -144,8 +144,7 @@
                 document.getElementById('time-left').innerText = `${hL}h ${mL}m remaining`;
                 document.getElementById('progress-bar').style.width = ((now - sTime) / (eTime - sTime) * 100) + "%";
             }
-            // MODIFIED LINE BELOW: Added (${seg.dur} hrs)
-            listHtml += `<div class="segment-card ${activeClass}"><div class="card-title">Seg ${seg.id}: ${seg.name} (${seg.dur} hrs)</div><div class="card-time">${sTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} - ${eTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>`;
+            listHtml += `<div class="segment-card ${activeClass}"><div class="card-title">Seg ${seg.id}: ${seg.name}</div><div class="card-time">${sTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} - ${eTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} (${seg.dur} hrs)</div></div>`;
             currentRunningTime = eTime;
         });
         document.getElementById('segmentList').innerHTML = listHtml;
