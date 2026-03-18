@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cyber Routine V8</title>
+    <title>Day Segment Routine</title>
     <style>
         :root {
             --bg-dark: #0B0E14; --bg-card: #151921; --neon-blue: #00D1FF;
@@ -59,7 +59,7 @@
 
 <script>
     const segmentsData = [
-        { id: 0, name: "Morning Routine", dur: 2 }, { id: 1, name: "Video Editing", dur: 3 },
+        { id: 0, name: "Wakeup Routine", dur: 2 }, { id: 1, name: "Video Editing", dur: 3 },
         { id: 2, name: "Free Time", dur: 2 }, { id: 3, name: "Religion / Personality", dur: 1 },
         { id: 4, name: "Study", dur: 1 }, { id: 5, name: "Free Time", dur: 1 },
         { id: 6, name: "Content Creation", dur: 2 }, { id: 7, name: "Insect/Rodent Business", dur: 1 },
@@ -144,7 +144,8 @@
                 document.getElementById('time-left').innerText = `${hL}h ${mL}m remaining`;
                 document.getElementById('progress-bar').style.width = ((now - sTime) / (eTime - sTime) * 100) + "%";
             }
-            listHtml += `<div class="segment-card ${activeClass}"><div class="card-title">Seg ${seg.id}: ${seg.name}</div><div class="card-time">${sTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} - ${eTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>`;
+            // MODIFIED LINE BELOW: Added (${seg.dur} hrs)
+            listHtml += `<div class="segment-card ${activeClass}"><div class="card-title">Seg ${seg.id}: ${seg.name} (${seg.dur} hrs)</div><div class="card-time">${sTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} - ${eTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>`;
             currentRunningTime = eTime;
         });
         document.getElementById('segmentList').innerHTML = listHtml;
